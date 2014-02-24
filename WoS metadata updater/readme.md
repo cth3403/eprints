@@ -30,7 +30,7 @@ You can either have the script work on all eprints attached to a user or supply 
 
 e.g. ./wos.pl [archive] [eprint ids]
 
-You will need to place the search configuration file in:  
+You will need to place the search configuration file (zz_wos.pl) in:  
 archive/cfg/cfg.d
 
 
