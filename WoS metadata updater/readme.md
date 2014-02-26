@@ -7,6 +7,8 @@
 
 This perl script takes a Web of Science ID from a specified eprint(s) and retrieves the metadata held by Web of Science for this ID.
 
+This script takes Tim Brody's script (http://files.eprints.org/446/) as inspiration.
+
 
 #### Requirements:
 
