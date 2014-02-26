@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use EPrints;
 use Getopt::Long;
-use Pod::Usage;
 use HTML::Entities;
 use HTTP::Cookies;
 use XML::LibXML;
@@ -13,30 +12,6 @@ use XML::LibXML;
 use SOAP::Lite;
 use Data::Dumper;
 
-
-# POD usage
-my $opt_help = 0;
-my $opt_verbose = 0;
-my $opt_quiet = 0;
-GetOptions(
-					"help|?" => \$opt_help,
-					"verbose+" => \$opt_verbose,
-					"quiet" => \$opt_quiet,
-				) or pod2usage( 2 );
-pod2usage( 1 ) if $opt_help;
-my $noise = $opt_quiet ? 0 : $opt_verbose+1;
-my( $repoid, @idlist ) = @ARGV;
-pod2usage( 2 ) unless defined $repoid;
-my $session = EPrints::Session->new( 1, $repoid, $noise );
-exit( 1 ) unless defined $session;
-my $dataset = $session->get_repository->get_dataset( "archive" );
-
-for( qw( creators_name title ) ) {
-	if( !$dataset->has_field( $_ ) ) {
-	die "Requires $_ field to be configured\n";
-	}
-}
-# End of POD
 
 # endpoints & namepsaces 
 our $AUTH_ENDPOINT = "http://search.webofknowledge.com/esti/wokmws/ws/WOKMWSAuthenticate";
@@ -49,8 +24,6 @@ our $ISI_NS = "http://woksearch.v3.wokmws.thomsonreuters.com";
 my $authCook = HTTP::Cookies->new();
 my $authSoap = SOAP::Lite->new();
 $authSoap->proxy( $AUTH_ENDPOINT);
-
-# don't include namespace in actions
 $authSoap->on_action( sub { qq() } );
 $authSoap->on_fault( sub { print STDERR "Error: ".$_[1]->faultstring } );
 $authSoap->autotype(0);
@@ -63,14 +36,10 @@ my $sid;
 # Begin of main transport setup
 my $soap = SOAP::Lite->new();
 $soap->proxy( $ISI_ENDPOINT);
-
-# don't include namespace in actions
 $soap->on_action( sub { qq() } );
 $soap->on_fault( sub { print STDERR "Error: ".$_[1]->faultstring } );
 $soap->autotype(0);
 $soap->readable(1);
-
-# put everything in the ISI namespace
 $soap->ns( $ISI_NS,'woksearch') ;
 #End of main transport setup
 
@@ -84,19 +53,19 @@ my $query_builder = $session->get_repository->get_conf( "wos", "build_query" );
 # lets get updating
 if( scalar(@idlist) ){
 	my $list = EPrints::List->new(
-												session => $session,
-												dataset => $dataset,
-												ids => \@idlist
-												);
+					session => $session,
+					dataset => $dataset,
+					ids => \@idlist
+					);
 	$list->map(\&update_eprint);
 	$list->dispose;
 }
 elsif( defined $searchconf ){
 	my $ds = $session->get_repository->get_dataset( "eprint" );
 	my $searchexp = EPrints::Search->new(
-																session => $session,
-																dataset => $ds,
-																);
+						session => $session,
+						dataset => $ds,
+						);
 																
 	# this sets the user that has the eprints to search WoS for 
 	# in this case we are limiting our search to user number 6201
@@ -141,11 +110,10 @@ sleep(int(rand(4)));
 $soap->transport->http_request->header( "Cookie" => "SID=\"" . $sid."\"" );
 
 # set the search parameters for the search
-my @search_params = (SOAP::Data->name( "databaseId" => "WOS" ),
-									SOAP::Data->name('uid'=> $query),SOAP::Data->name('queryLanguage')->value('en'),
-									SOAP::Data->name('retrieveParameters' => \SOAP::Data->value(
-									SOAP::Data->name('firstRecord')->value('1'),
-									SOAP::Data->name('count')->value('1'))));
+my @search_params = (SOAP::Data->name( "databaseId" => "WOS" ),	SOAP::Data->name('uid'=> $query),SOAP::Data->name('queryLanguage')->value('en'),
+								SOAP::Data->name('retrieveParameters' => \SOAP::Data->value(
+								SOAP::Data->name('firstRecord')->value('1'),
+								SOAP::Data->name('count')->value('1'))));
 									
 # ISI requires every argument be included, even if it's blank
 my $som;
